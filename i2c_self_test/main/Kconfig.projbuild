@@ -53,6 +53,28 @@ menu "Example Configuration"
     endmenu
 
     menu "BH1750 Sensor"
+        choice SSD1306_ADDR
+            prompt "SSD1306 I2C Address"
+            default SSD1306_SA0_LOW
+            help
+                Hardware address of SSD1306, determined by setting SA0 to high or low.
+
+            config SSD1306_ADDR
+                hex
+                default 0x3C if SSD1306_SA0_LOW
+                default 0x3D if SSD1306_SA0_HIGH
+
+            config SSD1306_SA0_LOW
+                bool "SA0=0"
+
+            config SSD1306_SA0_HIGH
+                bool "SA0=1"
+                help
+                    Not sure about SA0
+
+
+    endmenu
+    menu "BH1750 Sensor"
         choice BH1750_ADDR
             prompt "BH1750 I2C Address"
             default BH1750_I2C_ADDRESS_LOW
