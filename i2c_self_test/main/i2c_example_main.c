@@ -104,8 +104,18 @@ static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t *data_wr, si
 }
 
 /**
- * write something to GDDRAM and display it
-*/
+ * @brief test code to operate an SSD1306
+ *
+ * 1. Write data to GDDRAM
+ * _________________________________________________________________
+ * | start | slave_addr + wr_bit + ack | write 1 byte + ack  | stop |
+ * --------|---------------------------|---------------------|------|
+ * 2. Turn display on
+ * ______________________________________________________________________________________
+ * | start | slave_addr + wr_bit + ack | write 0xAF + ack  |  | stop |
+ * --------|---------------------------|-------------------|--------------------|------|
+ * 2. wait more than (24)? ms
+ */
 static esp_err_t i2c_master_write_display(i2c_port_t i2c_num)
 {
     int ret;
@@ -120,6 +130,7 @@ static esp_err_t i2c_master_write_display(i2c_port_t i2c_num)
         i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
         data = ((i * data) % 0xF1) & (0x95 * i);    // funky display formula
     }
+    // TODO: set display ON
     i2c_master_stop(cmd);
     ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
@@ -303,91 +314,91 @@ static void i2c_test_task(void *arg)
     vTaskDelete(NULL);
 }
 
-static void i2c_test_2(void *arg)
-{
-    int i = 0;
-    int ret;
-    uint32_t task_idx = (uint32_t)arg;
-    uint8_t *data = (uint8_t *)malloc(DATA_LENGTH);
-    int cnt = 0;
-    while (1) {
-        ESP_LOGI(TAG, "TASK[%d] test cnt: %d", task_idx, cnt++);
-        ret = i2c_master_write_display(I2C_MASTER_NUM);
-        xSemaphoreTake(print_mux, portMAX_DELAY);
-        if (ret == ESP_ERR_TIMEOUT) {
-            ESP_LOGE(TAG, "I2C Timeout");
-        } else if (ret == ESP_OK) {
-            printf("*******************\n");
-            printf("TASK[%d]  MASTER READ SENSOR( BH1750 )\n", task_idx);
-            printf("*******************\n");
-            printf("data_h: %02x\n", sensor_data_h);
-            printf("data_l: %02x\n", sensor_data_l);
-            printf("sensor val: %.02f [Lux]\n", (sensor_data_h << 8 | sensor_data_l) / 1.2);
-        } else {
-            ESP_LOGW(TAG, "%s: No ack, sensor not connected...skip...", esp_err_to_name(ret));
-        }
-        xSemaphoreGive(print_mux);
-        vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
-        //---------------------------------------------------
-        for (i = 0; i < DATA_LENGTH; i++) {
-            data[i] = i;
-        }
-        xSemaphoreTake(print_mux, portMAX_DELAY);
-        size_t d_size = i2c_slave_write_buffer(I2C_SLAVE_NUM, data, RW_TEST_LENGTH, 1000 / portTICK_RATE_MS);
-        if (d_size == 0) {
-            ESP_LOGW(TAG, "i2c slave tx buffer full");
-            ret = i2c_master_read_slave(I2C_MASTER_NUM, data_rd, DATA_LENGTH);
-        } else {
-            ret = i2c_master_read_slave(I2C_MASTER_NUM, data_rd, RW_TEST_LENGTH);
-        }
+// static void i2c_test_2(void *arg)
+// {
+//     int i = 0;
+//     int ret;
+//     uint32_t task_idx = (uint32_t)arg;
+//     uint8_t *data = (uint8_t *)malloc(DATA_LENGTH);
+//     int cnt = 0;
+//     while (1) {
+//         ESP_LOGI(TAG, "TASK[%d] test cnt: %d", task_idx, cnt++);
+//         ret = i2c_master_write_display(I2C_MASTER_NUM);
+//         xSemaphoreTake(print_mux, portMAX_DELAY);
+//         if (ret == ESP_ERR_TIMEOUT) {
+//             ESP_LOGE(TAG, "I2C Timeout");
+//         } else if (ret == ESP_OK) {
+//             printf("*******************\n");
+//             printf("TASK[%d]  MASTER READ SENSOR( BH1750 )\n", task_idx);
+//             printf("*******************\n");
+//             printf("data_h: %02x\n", sensor_data_h);
+//             printf("data_l: %02x\n", sensor_data_l);
+//             printf("sensor val: %.02f [Lux]\n", (sensor_data_h << 8 | sensor_data_l) / 1.2);
+//         } else {
+//             ESP_LOGW(TAG, "%s: No ack, sensor not connected...skip...", esp_err_to_name(ret));
+//         }
+//         xSemaphoreGive(print_mux);
+//         vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
+//         //---------------------------------------------------
+//         for (i = 0; i < DATA_LENGTH; i++) {
+//             data[i] = i;
+//         }
+//         xSemaphoreTake(print_mux, portMAX_DELAY);
+//         size_t d_size = i2c_slave_write_buffer(I2C_SLAVE_NUM, data, RW_TEST_LENGTH, 1000 / portTICK_RATE_MS);
+//         if (d_size == 0) {
+//             ESP_LOGW(TAG, "i2c slave tx buffer full");
+//             ret = i2c_master_read_slave(I2C_MASTER_NUM, data_rd, DATA_LENGTH);
+//         } else {
+//             ret = i2c_master_read_slave(I2C_MASTER_NUM, data_rd, RW_TEST_LENGTH);
+//         }
 
-        if (ret == ESP_ERR_TIMEOUT) {
-            ESP_LOGE(TAG, "I2C Timeout");
-        } else if (ret == ESP_OK) {
-            printf("*******************\n");
-            printf("TASK[%d]  MASTER READ FROM SLAVE\n", task_idx);
-            printf("*******************\n");
-            printf("====TASK[%d] Slave buffer data ====\n", task_idx);
-            disp_buf(data, d_size);
-            printf("====TASK[%d] Master read ====\n", task_idx);
-            disp_buf(data_rd, d_size);
-        } else {
-            ESP_LOGW(TAG, "TASK[%d] %s: Master read slave error, IO not connected...\n",
-                     task_idx, esp_err_to_name(ret));
-        }
-        xSemaphoreGive(print_mux);
-        vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
-        //---------------------------------------------------
-        int size;
-        for (i = 0; i < DATA_LENGTH; i++) {
-            data_wr[i] = i + 10;
-        }
-        xSemaphoreTake(print_mux, portMAX_DELAY);
-        //we need to fill the slave buffer so that master can read later
-        ret = i2c_master_write_slave(I2C_MASTER_NUM, data_wr, RW_TEST_LENGTH);
-        if (ret == ESP_OK) {
-            size = i2c_slave_read_buffer(I2C_SLAVE_NUM, data, RW_TEST_LENGTH, 1000 / portTICK_RATE_MS);
-        }
-        if (ret == ESP_ERR_TIMEOUT) {
-            ESP_LOGE(TAG, "I2C Timeout");
-        } else if (ret == ESP_OK) {
-            printf("*******************\n");
-            printf("TASK[%d]  MASTER WRITE TO SLAVE\n", task_idx);
-            printf("*******************\n");
-            printf("----TASK[%d] Master write ----\n", task_idx);
-            disp_buf(data_wr, RW_TEST_LENGTH);
-            printf("----TASK[%d] Slave read: [%d] bytes ----\n", task_idx, size);
-            disp_buf(data, size);
-        } else {
-            ESP_LOGW(TAG, "TASK[%d] %s: Master write slave error, IO not connected....\n",
-                     task_idx, esp_err_to_name(ret));
-        }
-        xSemaphoreGive(print_mux);
-        vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
-    }
-    vSemaphoreDelete(print_mux);
-    vTaskDelete(NULL);
-}
+//         if (ret == ESP_ERR_TIMEOUT) {
+//             ESP_LOGE(TAG, "I2C Timeout");
+//         } else if (ret == ESP_OK) {
+//             printf("*******************\n");
+//             printf("TASK[%d]  MASTER READ FROM SLAVE\n", task_idx);
+//             printf("*******************\n");
+//             printf("====TASK[%d] Slave buffer data ====\n", task_idx);
+//             disp_buf(data, d_size);
+//             printf("====TASK[%d] Master read ====\n", task_idx);
+//             disp_buf(data_rd, d_size);
+//         } else {
+//             ESP_LOGW(TAG, "TASK[%d] %s: Master read slave error, IO not connected...\n",
+//                      task_idx, esp_err_to_name(ret));
+//         }
+//         xSemaphoreGive(print_mux);
+//         vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
+//         //---------------------------------------------------
+//         int size;
+//         for (i = 0; i < DATA_LENGTH; i++) {
+//             data_wr[i] = i + 10;
+//         }
+//         xSemaphoreTake(print_mux, portMAX_DELAY);
+//         //we need to fill the slave buffer so that master can read later
+//         ret = i2c_master_write_slave(I2C_MASTER_NUM, data_wr, RW_TEST_LENGTH);
+//         if (ret == ESP_OK) {
+//             size = i2c_slave_read_buffer(I2C_SLAVE_NUM, data, RW_TEST_LENGTH, 1000 / portTICK_RATE_MS);
+//         }
+//         if (ret == ESP_ERR_TIMEOUT) {
+//             ESP_LOGE(TAG, "I2C Timeout");
+//         } else if (ret == ESP_OK) {
+//             printf("*******************\n");
+//             printf("TASK[%d]  MASTER WRITE TO SLAVE\n", task_idx);
+//             printf("*******************\n");
+//             printf("----TASK[%d] Master write ----\n", task_idx);
+//             disp_buf(data_wr, RW_TEST_LENGTH);
+//             printf("----TASK[%d] Slave read: [%d] bytes ----\n", task_idx, size);
+//             disp_buf(data, size);
+//         } else {
+//             ESP_LOGW(TAG, "TASK[%d] %s: Master write slave error, IO not connected....\n",
+//                      task_idx, esp_err_to_name(ret));
+//         }
+//         xSemaphoreGive(print_mux);
+//         vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
+//     }
+//     vSemaphoreDelete(print_mux);
+//     vTaskDelete(NULL);
+// }
 
 void app_main(void)
 {
