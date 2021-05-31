@@ -1,17 +1,9 @@
 // Driver Interface for SSD1306 OLED 128 x 64 Display
 
 #include "esp_log.h"
+#include "driver/i2c.h"
 
-#define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< slave address for SSD1306 sensor */
 
-// Command byte defs 
-#define SSD1306_CMD_SET_CONTRAST_CONTROL 0x81
-#define SSD1306_CMD_DISPLAY_POWER_ON     0xAE
-#define SSD1306_CMD_DISPLAY_POWER_OFF    0xAF
-#define SSD1306_CMD_DISPLAY_MODE_NORMAL  0xA6
-#define SSD1306_CMD_DISPLAY_MODE_INVERSE 0xA7
-#define SSD1306_CMD_DISPLAY_PIXELS_RAM   0xA4
-#define SSD1306_CMD_DISPLAY_PIXELS_ON    0xA5
 
 
 
@@ -21,20 +13,22 @@
 
 
 /**
- * @brief test code to read esp-i2c-slave
- *        We need to fill the buffer of esp slave device, then master can read them out.
- *
- * _______________________________________________________________________________________
- * | start | slave_addr + rd_bit +ack | read n-1 bytes + ack | read 1 byte + nack | stop |
- * --------|--------------------------|----------------------|--------------------|------|
- *
+ * @brief wrapper to assemble address byte for ssd1306
+ *  @note SA0 is managed in config
+ * 
+ * @param cmd an i2c command queue handle
+ * 
+ * @param read_write always write for i2c interface
  */
-static esp_err_t ssd1306_send_address_byte(uint8_t address_lsb, uint8_t read_write);
+static esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write);
 
 
 /**
  * @brief Send a control byte to ssd1306
  *
+ * 
+ * @param cmd an i2c command queue handle
+ * 
  * @param Co If the Co bit is set as logic “0”, the transmission of the following information will contain 
  *           data bytes only
  * @param data_command The D/C# bit determines the next data byte is acted as a command or a data. If the D/C# bit is 
@@ -43,13 +37,13 @@ static esp_err_t ssd1306_send_address_byte(uint8_t address_lsb, uint8_t read_wri
  *           The GDDRAM column address pointer will be increased by one automatically after each 
  *           data write. 
  */
-static esp_err_t ssd1306_send_control_byte(uint8_t Co, uint8_t data_command);
+static esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command);
 
 
 
 
 
-// Higher level functions
+//* Higher level functions
 
 /**
  * @brief set display contrast 
