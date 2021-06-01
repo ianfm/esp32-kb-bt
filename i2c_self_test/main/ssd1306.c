@@ -37,7 +37,19 @@ static esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uin
     return i2c_master_write_byte(cmd, (Co << 7 | data_command << 6), ACK_CHECK_EN);
 }
 
-//------------------------------------------------------------
+//!------------------------------------------------------------
+
+static esp_err_t ssd1306_send_data(i2c_port_t i2c_num, uint8_t *data_wr, size_t size) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    ssd1306_send_address_byte(cmd, WRITE_BIT);
+    ssd1306_send_control_byte(cmd, SSD1306_DATA_BYTES, SSD1306_DATA_BIT);
+    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
 
 
 static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
@@ -47,6 +59,22 @@ static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
     ssd1306_send_control_byte(cmd, SSD1306_MIXED_BYTES, SSD1306_COMMAND_BIT);
     i2c_master_write_byte(cmd, SSD1306_CMD_SET_CONTRAST_CONTROL, ACK_CHECK_EN);
     i2c_master_write_byte(cmd, contrast, ACK_CHECK_EN);
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+static esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    ssd1306_send_address_byte(cmd, WRITE_BIT);
+    ssd1306_send_control_byte(cmd, SSD1306_MIXED_BYTES, SSD1306_COMMAND_BIT);
+    if (display_on) {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_POWER_ON, ACK_CHECK_EN);
+    } else {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_POWER_OFF, ACK_CHECK_EN);
+    }
     i2c_master_stop(cmd);
     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
     i2c_cmd_link_delete(cmd);
