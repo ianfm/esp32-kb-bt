@@ -15,6 +15,7 @@
 #include "esp_log.h"
 #include "driver/i2c.h"
 #include "sdkconfig.h"
+#include "ssd1306.h"
 
 static const char *TAG = "i2c-example";
 
@@ -118,22 +119,18 @@ static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t *data_wr, si
  */
 static esp_err_t i2c_master_write_display(i2c_port_t i2c_num)
 {
-    int ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, SSD1306_SENSOR_ADDR << 1 | WRITE_BIT, ACK_CHECK_EN);
-    // send control byte with Co=0, D/C=1
-    i2c_master_write_byte(cmd, 0b01000000, ACK_CHECK_EN);
-    // send data packets to GDDRAM
+    esp_err_t ret;
+    const size_t data_length = 240;
+    uint8_t *data = (uint8_t *)malloc(data_length);
+    ssd1306_turn_display_on_off(i2c_num, 1);
+    // generate data buffer for GDDRAM
     for(int i=0; i<30; ++i){
-        uint8_t data = 0xA7;
-        i2c_master_write_byte(cmd, data, ACK_CHECK_EN);
-        data = ((i * data) % 0xF1) & (0x95 * i);    // funky display formula
+        static uint8_t val = 0xA7;
+        val = ((i * val) % 0xF1) & (0x95 * i);
+        data[i*8] = val;    // funky display formula
     }
-    // TODO: set display ON
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
+    //! I haven't read through enough data write notes to know exactly where this will write in RAM
+    esp_err_t ret = ssd1306_send_data(i2c_num, data, data_length);
     return ret;
 }
 
@@ -208,19 +205,16 @@ static void disp_buf(uint8_t *buf, int len)
     printf("\n");
 }
 
-static void i2c_test_task(void *arg)
+static void display_test_task(void *arg)
 {
     int i = 0;
     int ret;
     uint32_t task_idx = (uint32_t)arg;
-    // look for a use for this so I don't have to look up malloc
-    uint8_t *data = (uint8_t *)malloc(DATA_LENGTH);
     int cnt = 0;
     while (1) {
         ESP_LOGI(TAG, "TASK[%d] test cnt: %d", task_idx, cnt++);
-        
-        // TODO: replace with i2c_display_test()
-        ret = i2c_master_write_display(i2c_port_t i2c_num)
+
+        ret = i2c_master_write_display(I2C_MASTER_NUM); // What is 12cnum???
 
         // TODO: print out some logging information
         xSemaphoreTake(print_mux, portMAX_DELAY);
@@ -230,9 +224,10 @@ static void i2c_test_task(void *arg)
             printf("*******************\n");
             printf("TASK[%d]  MASTER WRITE DISPLAY( SSD1306 )\n", task_idx);
             printf("*******************\n");
+            printf("240 bytes written to GDDRAM\n");
             printf("cnt: %02x\n", cnt);
         } else {
-            ESP_LOGW(TAG, "%s: No ack, sensor not connected...skip...", esp_err_to_name(ret));
+            ESP_LOGW(TAG, "%s: No ack, display not connected...skip...", esp_err_to_name(ret));
         }
         xSemaphoreGive(print_mux); 
 
@@ -246,6 +241,5 @@ void app_main(void)
 {
     print_mux = xSemaphoreCreateMutex();
     ESP_ERROR_CHECK(i2c_master_init());
-    xTaskCreate(i2c_test_task, "i2c_test_task_0", 1024 * 2, (void *)0, 10, NULL);
-    xTaskCreate(i2c_test_task, "i2c_test_task_1", 1024 * 2, (void *)1, 10, NULL);
+    xTaskCreate(i2c_test_task, "i2c_test_task", 1024 * 2, (void *)0, 10, NULL);
 }
