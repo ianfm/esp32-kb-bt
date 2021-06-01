@@ -14,23 +14,16 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/i2c.h"
-#include "sdkconfig.h"
 #include "ssd1306.h"
+#include "sdkconfig.h"
 
 static const char *TAG = "i2c-example";
 
 #define _I2C_NUMBER(num) I2C_NUM_##num
 #define I2C_NUMBER(num) _I2C_NUMBER(num)
 
-#define DATA_LENGTH 512                  /*!< Data buffer length of test buffer */
-#define RW_TEST_LENGTH 128               /*!< Data length for r/w test, [0,DATA_LENGTH] */
+#define DATA_LENGTH 240                  /*!< Data buffer length of test buffer */
 #define DELAY_TIME_BETWEEN_ITEMS_MS 1000 /*!< delay time between different test items */
-
-#define I2C_SLAVE_SCL_IO CONFIG_I2C_SLAVE_SCL               /*!< gpio number for i2c slave clock */
-#define I2C_SLAVE_SDA_IO CONFIG_I2C_SLAVE_SDA               /*!< gpio number for i2c slave data */
-#define I2C_SLAVE_NUM I2C_NUMBER(CONFIG_I2C_SLAVE_PORT_NUM) /*!< I2C port number for slave dev */
-#define I2C_SLAVE_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C slave tx buffer size */
-#define I2C_SLAVE_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C slave rx buffer size */
 
 #define I2C_MASTER_SCL_IO CONFIG_I2C_MASTER_SCL               /*!< gpio number for I2C master clock */
 #define I2C_MASTER_SDA_IO CONFIG_I2C_MASTER_SDA               /*!< gpio number for I2C master data  */
@@ -41,10 +34,6 @@ static const char *TAG = "i2c-example";
 
 #define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< slave address for SSD1306 sensor */
 
-#define BH1750_SENSOR_ADDR CONFIG_BH1750_ADDR   /*!< slave address for BH1750 sensor */
-#define BH1750_CMD_START CONFIG_BH1750_OPMODE   /*!< Operation mode */
-#define ESP_SLAVE_ADDR CONFIG_I2C_SLAVE_ADDRESS /*!< ESP32 slave address, you can set any 7bit value */
-
 #define WRITE_BIT I2C_MASTER_WRITE              /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ                /*!< I2C master read */
 #define ACK_CHECK_EN 0x1                        /*!< I2C master will check ack from slave*/
@@ -54,55 +43,7 @@ static const char *TAG = "i2c-example";
 
 SemaphoreHandle_t print_mux = NULL;
 
-/**
- * @brief test code to read esp-i2c-slave
- *        We need to fill the buffer of esp slave device, then master can read them out.
- *
- * _______________________________________________________________________________________
- * | start | slave_addr + rd_bit +ack | read n-1 bytes + ack | read 1 byte + nack | stop |
- * --------|--------------------------|----------------------|--------------------|------|
- *
- */
-static esp_err_t i2c_master_read_slave(i2c_port_t i2c_num, uint8_t *data_rd, size_t size)
-{
-    if (size == 0) {
-        return ESP_OK;
-    }
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (ESP_SLAVE_ADDR << 1) | READ_BIT, ACK_CHECK_EN);
-    if (size > 1) {
-        i2c_master_read(cmd, data_rd, size - 1, ACK_VAL);
-    }
-    i2c_master_read_byte(cmd, data_rd + size - 1, NACK_VAL);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
 
-/**
- * @brief Test code to write esp-i2c-slave
- *        Master device write data to slave(both esp32),
- *        the data will be stored in slave buffer.
- *        We can read them out from slave buffer.
- *
- * ___________________________________________________________________
- * | start | slave_addr + wr_bit + ack | write n bytes + ack  | stop |
- * --------|---------------------------|----------------------|------|
- *
- */
-static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t *data_wr, size_t size)
-{
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (ESP_SLAVE_ADDR << 1) | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write(cmd, data_wr, size, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    return ret;
-}
 
 /**
  * @brief test code to operate an SSD1306
@@ -117,11 +58,8 @@ static esp_err_t i2c_master_write_slave(i2c_port_t i2c_num, uint8_t *data_wr, si
  * --------|---------------------------|-------------------|--------------------|------|
  * 2. wait more than (24)? ms
  */
-static esp_err_t i2c_master_write_display(i2c_port_t i2c_num)
+esp_err_t i2c_master_write_display(i2c_port_t i2c_num, uint8_t* data)
 {
-    esp_err_t ret;
-    const size_t data_length = 240;
-    uint8_t *data = (uint8_t *)malloc(data_length);
     ssd1306_turn_display_on_off(i2c_num, 1);
     // generate data buffer for GDDRAM
     for(int i=0; i<30; ++i){
@@ -130,45 +68,7 @@ static esp_err_t i2c_master_write_display(i2c_port_t i2c_num)
         data[i*8] = val;    // funky display formula
     }
     //! I haven't read through enough data write notes to know exactly where this will write in RAM
-    esp_err_t ret = ssd1306_send_data(i2c_num, data, data_length);
-    return ret;
-}
-
-/**
- * @brief test code to operate on BH1750 sensor
- *
- * 1. set operation mode(e.g One time L-resolution mode)
- * _________________________________________________________________
- * | start | slave_addr + wr_bit + ack | write 1 byte + ack  | stop |
- * --------|---------------------------|---------------------|------|
- * 2. wait more than 24 ms
- * 3. read data
- * ______________________________________________________________________________________
- * | start | slave_addr + rd_bit + ack | read 1 byte + ack  | read 1 byte + nack | stop |
- * --------|---------------------------|--------------------|--------------------|------|
- */
-static esp_err_t i2c_master_sensor_test(i2c_port_t i2c_num, uint8_t *data_h, uint8_t *data_l)
-{
-    int ret;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, BH1750_SENSOR_ADDR << 1 | WRITE_BIT, ACK_CHECK_EN);
-    i2c_master_write_byte(cmd, BH1750_CMD_START, ACK_CHECK_EN);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-    vTaskDelay(30 / portTICK_RATE_MS);
-    cmd = i2c_cmd_link_create();
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, BH1750_SENSOR_ADDR << 1 | READ_BIT, ACK_CHECK_EN);
-    i2c_master_read_byte(cmd, data_h, ACK_VAL);
-    i2c_master_read_byte(cmd, data_l, NACK_VAL);
-    i2c_master_stop(cmd);
-    ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-    i2c_cmd_link_delete(cmd);
+    esp_err_t ret = ssd1306_send_data(i2c_num, data, DATA_LENGTH);
     return ret;
 }
 
@@ -207,14 +107,14 @@ static void disp_buf(uint8_t *buf, int len)
 
 static void display_test_task(void *arg)
 {
-    int i = 0;
     int ret;
+    uint8_t *data = (uint8_t *)malloc(DATA_LENGTH);
     uint32_t task_idx = (uint32_t)arg;
     int cnt = 0;
     while (1) {
         ESP_LOGI(TAG, "TASK[%d] test cnt: %d", task_idx, cnt++);
 
-        ret = i2c_master_write_display(I2C_MASTER_NUM); // What is 12cnum???
+        ret = i2c_master_write_display(I2C_MASTER_NUM, data); // What is 12cnum???
 
         // TODO: print out some logging information
         xSemaphoreTake(print_mux, portMAX_DELAY);
@@ -225,6 +125,8 @@ static void display_test_task(void *arg)
             printf("TASK[%d]  MASTER WRITE DISPLAY( SSD1306 )\n", task_idx);
             printf("*******************\n");
             printf("240 bytes written to GDDRAM\n");
+            disp_buf(data, DATA_LENGTH);
+            printf("*******************\n");
             printf("cnt: %02x\n", cnt);
         } else {
             ESP_LOGW(TAG, "%s: No ack, display not connected...skip...", esp_err_to_name(ret));
@@ -234,6 +136,7 @@ static void display_test_task(void *arg)
         vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS * (task_idx + 1)) / portTICK_RATE_MS);
     }
     vSemaphoreDelete(print_mux);
+    free(data);
     vTaskDelete(NULL);
 }
 
@@ -241,5 +144,5 @@ void app_main(void)
 {
     print_mux = xSemaphoreCreateMutex();
     ESP_ERROR_CHECK(i2c_master_init());
-    xTaskCreate(i2c_test_task, "i2c_test_task", 1024 * 2, (void *)0, 10, NULL);
+    xTaskCreate(display_test_task, "i2c_test_task", 1024 * 2, (void *)0, 10, NULL);
 }

@@ -52,8 +52,8 @@ Mkfile.old
 dkms.conf
 
 # Custom
-.include/
-.vscode/
+*/.include/
+*/.vscode/
 .metadata
 .cproject
 .project

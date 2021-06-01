@@ -12,7 +12,7 @@
  * 
  * @param read_write always write for i2c interface
  */
-static esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write);
+esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write);
 
 
 /**
@@ -29,7 +29,7 @@ static esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_wr
  *           The GDDRAM column address pointer will be increased by one automatically after each 
  *           data write. 
  */
-static esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command);
+esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command);
 
 
 
@@ -38,11 +38,20 @@ static esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uin
 //! -------------- Higher level functions ---------------------
 
 /**
- * @brief set display contrast 
+ * @brief Send multiple bytes of data to GDDRAM
+ * 
+ * @param i2c_num
+ * @param data_wr
+ * @param size
+ */
+esp_err_t ssd1306_send_data(i2c_port_t i2c_num, uint8_t *data_wr, size_t size);
+
+/**
+ * @brief Set display contrast 
  *
  * @param contrast a value from 1 to 256, where contrast increases as the value increases
  */
-static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast);
+esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast);
 
 
 /**
@@ -50,7 +59,7 @@ static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast);
  *
  * @param  pixels_on if on=0 display RAM contents on screen, if on=1 ignore RAM and entire display turns on.
  */
-static esp_err_t ssd1306_entire_display_on(i2c_port_t i2c_num, uint8_t pixels_on);
+esp_err_t ssd1306_entire_display_on(i2c_port_t i2c_num, uint8_t pixels_on);
 
 
 /**
@@ -59,7 +68,7 @@ static esp_err_t ssd1306_entire_display_on(i2c_port_t i2c_num, uint8_t pixels_on
  * @param  inverse inverse=1 inverts display of RAM contents so that 1 in RAM --> OFF in display.
  *                  inverse=0 resets display to normal, so 0 in RAM --> OFF in display.
  */
-static esp_err_t ssd1306_invert_display(i2c_port_t i2c_num, uint8_t inverse);
+esp_err_t ssd1306_invert_display(i2c_port_t i2c_num, uint8_t inverse);
 
 
 /**
@@ -67,7 +76,7 @@ static esp_err_t ssd1306_invert_display(i2c_port_t i2c_num, uint8_t inverse);
  *
  * @param  display_on Set to 1 to turn display on or set to 0 to put display to sleep.
  */
-static esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on);
+esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on);
 
 
 /**

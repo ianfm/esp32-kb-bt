@@ -27,19 +27,19 @@
 #define SSD1306_CMD_DISPLAY_PIXELS_ON    0xA5
 
 
-static esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write) {
+esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write) {
     return i2c_master_write_byte(cmd, (SSD1306_SENSOR_ADDR << 1) | SSD1306_WRITE_BIT, ACK_CHECK_EN);
 
 }
 
 
-static esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command) {
+esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command) {
     return i2c_master_write_byte(cmd, (Co << 7 | data_command << 6), ACK_CHECK_EN);
 }
 
 //!------------------------------------------------------------
 
-static esp_err_t ssd1306_send_data(i2c_port_t i2c_num, uint8_t *data_wr, size_t size) {
+esp_err_t ssd1306_send_data(i2c_port_t i2c_num, uint8_t *data_wr, size_t size) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     ssd1306_send_address_byte(cmd, WRITE_BIT);
@@ -52,7 +52,7 @@ static esp_err_t ssd1306_send_data(i2c_port_t i2c_num, uint8_t *data_wr, size_t 
 }
 
 
-static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
+esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     ssd1306_send_address_byte(cmd, WRITE_BIT);
@@ -65,7 +65,7 @@ static esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
     return ret;
 }
 
-static esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on) {
+esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
     ssd1306_send_address_byte(cmd, WRITE_BIT);
