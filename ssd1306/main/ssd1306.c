@@ -65,6 +65,38 @@ esp_err_t ssd1306_set_contrast(i2c_port_t i2c_num, uint8_t contrast) {
     return ret;
 }
 
+esp_err_t ssd1306_entire_display_on(i2c_port_t i2c_num, uint8_t pixels_on) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    ssd1306_send_address_byte(cmd, WRITE_BIT);
+    ssd1306_send_control_byte(cmd, SSD1306_MIXED_BYTES, SSD1306_COMMAND_BIT);
+    if (pixels_on) {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_PIXELS_ON, ACK_CHECK_EN);
+    } else {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_PIXELS_RAM, ACK_CHECK_EN);
+    }
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS); /* TODO: understand timing of this line */
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+esp_err_t ssd1306_invert_display(i2c_port_t i2c_num, uint8_t inverse) {
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    ssd1306_send_address_byte(cmd, WRITE_BIT);
+    ssd1306_send_control_byte(cmd, SSD1306_MIXED_BYTES, SSD1306_COMMAND_BIT);
+    if (inverse) {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_MODE_INVERSE, ACK_CHECK_EN);
+    } else {
+        i2c_master_write_byte(cmd, SSD1306_CMD_DISPLAY_MODE_NORMAL, ACK_CHECK_EN);
+    }
+    i2c_master_stop(cmd);
+    esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
 esp_err_t ssd1306_turn_display_on_off(i2c_port_t i2c_num, uint8_t display_on) {
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
