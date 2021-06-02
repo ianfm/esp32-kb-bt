@@ -60,11 +60,10 @@ SemaphoreHandle_t print_mux = NULL;
  */
 esp_err_t i2c_master_write_display(i2c_port_t i2c_num, uint8_t* data)
 {
-    ssd1306_turn_display_on_off(i2c_num, 1);
     // generate data buffer for GDDRAM
     for(int i=0; i<30; ++i){
         static uint8_t val = 0xA7;
-        val = ((i * val) % 0xF1) & (0x95 * i);
+        val = ((i * val) % 0xF1) & (0x95 * i) + 800;
         data[i*8] = val;    // funky display formula
     }
     //! I haven't read through enough data write notes to know exactly where this will write in RAM
@@ -111,11 +110,36 @@ static void display_test_task(void *arg)
     uint8_t *data = (uint8_t *)malloc(DATA_LENGTH);
     uint32_t task_idx = (uint32_t)arg;
     int cnt = 0;
+
+    // Setup
+    ret = ssd1306_turn_display_on_off(I2C_MASTER_NUM, 1);
+    if (ret == ESP_OK) {
+        printf("*******************\n");
+        printf("TASK[%d]  Display On command successful\n", task_idx);
+        printf("*******************\n");
+    } else {
+        ESP_LOGW(TAG, "%s: No ack or other problem ...skip...", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "I2C Error");
+    } 
+
     while (1) {
         ESP_LOGI(TAG, "TASK[%d] test cnt: %d", task_idx, cnt++);
 
+        ret = ssd1306_entire_display_on(I2C_MASTER_NUM, 1);
+        if (ret == ESP_OK) {
+            printf("TASK[%d]  All Pixels On command successful\n", task_idx);
+        } else {
+            ESP_LOGW(TAG, "%s: No ack or other problem ...skip...", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "I2C Error");
+        } 
+        vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS / portTICK_RATE_MS);
         ret = i2c_master_write_display(I2C_MASTER_NUM, data); // What is 12cnum???
-
+        if (ret == ESP_OK) {
+            printf("TASK[%d]  Write To GDDRAM Data successful\n", task_idx);
+        } else {
+            ESP_LOGW(TAG, "%s: No ack or other problem ...skip...", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "I2C Error");
+        } 
         // TODO: print out some logging information
         xSemaphoreTake(print_mux, portMAX_DELAY);
         if (ret == ESP_ERR_TIMEOUT) {
