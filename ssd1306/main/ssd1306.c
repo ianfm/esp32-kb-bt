@@ -8,33 +8,82 @@
 #define ACK_VAL 0x0                             /*!< I2C ack value */
 #define NACK_VAL 0x1                            /*!< I2C nack value */
 
-#define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< slave address for SSD1306 sensor */
+// #define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< I don't understand the menu system well enough to make this work. */
+#define SSD1306_SENSOR_ADDR 0x78   /*!< slave address for SSD1306 sensor */
+#define SSD1306_SA0 0b0         /* Slave Address bit 0 */
 
-#define SSD1306_WRITE_BIT 0x0       /* R/W# from datasheet */
-#define SSD1306_READ_BIT 0x1
-#define SSD1306_COMMAND_BIT  0x0    /* D/C# from datasheet */
-#define SSD1306_DATA_BIT  0x1
+#define SSD1306_WRITE_BIT   0x0       /* R/W# from datasheet */
+#define SSD1306_READ_BIT    0x1
+#define SSD1306_COMMAND_BIT 0x0    /* D/C# from datasheet */
+#define SSD1306_DATA_BIT    0x1
 #define SSD1306_DATA_BYTES  0x1      /* Co from datasheet */
-#define SSD1306_MIXED_BYTES  0x0
+#define SSD1306_MIXED_BYTES 0x0
 
-// Command byte defs 
+// Control byte defs
+#define MULT_COMMAND 0x80
+#define ONE_COMMAND  0x00
+#define MULT_DATA    0xC0
+#define ONE_DATA     0x40
+
+
+// Fundamental Command byte defs 
 #define SSD1306_CMD_SET_CONTRAST_CONTROL 0x81
-#define SSD1306_CMD_DISPLAY_POWER_ON     0xAE
-#define SSD1306_CMD_DISPLAY_POWER_OFF    0xAF
+
+#define SSD1306_CMD_DISPLAY_POWER_OFF    0xAE
+#define SSD1306_CMD_DISPLAY_POWER_ON     0xAF
+
 #define SSD1306_CMD_DISPLAY_MODE_NORMAL  0xA6
 #define SSD1306_CMD_DISPLAY_MODE_INVERSE 0xA7
+
 #define SSD1306_CMD_DISPLAY_PIXELS_RAM   0xA4
 #define SSD1306_CMD_DISPLAY_PIXELS_ON    0xA5
 
+// Scrolling Command byte defs
 
-esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write) {
-    return i2c_master_write_byte(cmd, (SSD1306_SENSOR_ADDR << 1) | SSD1306_WRITE_BIT, ACK_CHECK_EN);
+// Address Setting Command byte defs
+// Page addressing mode only
+// 0x0 - 0xF
+#define SSD1306_CMD_SET_LOW_COL_ADDR    0x00
+// 0x10 - 0x1F
+#define SSD1306_CMD_SET_HI_COL_ADDR     0x10
+
+// Addressing modes - 2 byte cmd
+#define SSD1306_CMD_ADDR_MODE 0x20
+#define SSD1306_CMD_ADDR_MODE_HORZ 0x00
+#define SSD1306_CMD_ADDR_MODE_VERT 0x01
+#define SSD1306_CMD_ADDR_MODE_PAGE 0x02
+
+// Set col address for H or V mode
+// 3 byte cmd
+#define SSD1306_CMD_SET_COL_ADDR_RANGE 0X21
+
+// H or V mode only
+#define SSD1306_CMD_SET_PAGE_ADDR 0x22
+
+// page addressing mode only
+// B0 + 0-7
+#define SSD1306_CMD_SET_PAGE_START 0xB0
+
+// Hardware Config Command bytes
+// 0x40 - 0X7F
+#define SSD1306_CMD_DISP_START_LINE 0x40
+
+#define SSD1306_CMD_SEG_REMAP_0 0xA0
+#define SSD1306_CMD_SEG_REMAP_127 0xA1
+
+// 2 byte cmd
+// Set mux ratio to N-1 MUX
+#define SSD1306_CMD_SET_MUX_RATIO 0xA8
+
+
+esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd) {
+    return i2c_master_write_byte(cmd, (SSD1306_SENSOR_ADDR | (SSD1306_SA0 << 1) | SSD1306_WRITE_BIT), ACK_CHECK_EN);
 
 }
 
 
-esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command) {
-    return i2c_master_write_byte(cmd, (Co << 7 | data_command << 6), ACK_CHECK_EN);
+esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t control_byte) {
+    return i2c_master_write_byte(cmd, control_byte, ACK_CHECK_EN);
 }
 
 //!------------------------------------------------------------

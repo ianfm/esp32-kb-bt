@@ -10,9 +10,9 @@
  * 
  * @param cmd an i2c command queue handle
  * 
- * @param read_write always write for i2c interface
+ * @note read_write always write for i2c interface
  */
-esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write);
+esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd);
 
 
 /**
@@ -21,15 +21,10 @@ esp_err_t ssd1306_send_address_byte(i2c_cmd_handle_t cmd, uint8_t read_write);
  * 
  * @param cmd an i2c command queue handle
  * 
- * @param Co If the Co bit is set as logic “0”, the transmission of the following information will contain 
- *           data bytes only
- * @param data_command The D/C# bit determines the next data byte is acted as a command or a data. If the D/C# bit is 
- *           set to logic “0”, it defines the following data byte as a command. If the D/C# bit is set to 
- *           logic “1”, it defines the following data byte as a data which will be stored at the GDDRAM. 
- *           The GDDRAM column address pointer will be increased by one automatically after each 
- *           data write. 
+ * @param control_byte one of MULT_COMMAND, ONE_COMMAND, MULT_DATA, ONE_DATA, indicating the 
+ *                      meaning of the bytes that follow.
  */
-esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t Co, uint8_t data_command);
+esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t contol_byte);
 
 
 

@@ -32,7 +32,7 @@ static const char *TAG = "i2c-example";
 #define I2C_MASTER_TX_BUF_DISABLE 0                           /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE 0                           /*!< I2C master doesn't need buffer */
 
-#define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< slave address for SSD1306 sensor */
+// #define SSD1306_SENSOR_ADDR CONFIG_SSD1306_ADDR   /*!< slave address for SSD1306 sensor */
 
 #define WRITE_BIT I2C_MASTER_WRITE              /*!< I2C master write */
 #define READ_BIT I2C_MASTER_READ                /*!< I2C master read */
@@ -63,7 +63,7 @@ esp_err_t i2c_master_write_display(i2c_port_t i2c_num, uint8_t* data)
     // generate data buffer for GDDRAM
     for(int i=0; i<30; ++i){
         static uint8_t val = 0xA7;
-        val = ((i * val) % 0xF1) & (0x95 * i) + 800;
+        val = (((i * val) % 0xF1) & (0x95 * i)) + 800;
         data[i*8] = val;    // funky display formula
     }
     //! I haven't read through enough data write notes to know exactly where this will write in RAM
@@ -132,7 +132,7 @@ static void display_test_task(void *arg)
             ESP_LOGW(TAG, "%s: No ack or other problem ...skip...", esp_err_to_name(ret));
             ESP_LOGE(TAG, "I2C Error");
         } 
-        vTaskDelay((DELAY_TIME_BETWEEN_ITEMS_MS / portTICK_RATE_MS);
+        vTaskDelay(DELAY_TIME_BETWEEN_ITEMS_MS / portTICK_RATE_MS);
         ret = i2c_master_write_display(I2C_MASTER_NUM, data); // What is 12cnum???
         if (ret == ESP_OK) {
             printf("TASK[%d]  Write To GDDRAM Data successful\n", task_idx);
