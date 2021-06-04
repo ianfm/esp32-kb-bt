@@ -112,6 +112,15 @@ static void display_test_task(void *arg)
     int cnt = 0;
 
     // Setup
+    ret = ssd1306_init(I2C_MASTER_NUM);
+    if (ret == ESP_OK) {
+        printf("*******************\n");
+        printf("TASK[%d]  Display init sequence successful\n", task_idx);
+        printf("*******************\n");
+    } else {
+        ESP_LOGW(TAG, "%s: No ack or other problem ...skip...", esp_err_to_name(ret));
+    } 
+
     ret = ssd1306_turn_display_on_off(I2C_MASTER_NUM, 1);
     if (ret == ESP_OK) {
         printf("*******************\n");

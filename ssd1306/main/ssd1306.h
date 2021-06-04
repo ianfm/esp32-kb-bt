@@ -28,9 +28,14 @@ esp_err_t ssd1306_send_control_byte(i2c_cmd_handle_t cmd, uint8_t contol_byte);
 
 
 
-
-
 //! -------------- Higher level functions ---------------------
+
+/**
+ * @brief initialize most aspects of OLED
+ * 
+ * @param 12cnum
+ */
+esp_err_t ssd1306_init(i2c_port_t i2c_num);
 
 /**
  * @brief Send multiple bytes of data to GDDRAM
