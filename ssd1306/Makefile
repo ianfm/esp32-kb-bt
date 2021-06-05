@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := i2c-example
+PROJECT_NAME := kb-bt-oled
 
 include $(IDF_PATH)/make/project.mk
 
