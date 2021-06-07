@@ -13,6 +13,10 @@
  * Explore BT interface
  * Look through BT HID projects 
  * 
+ * @note
+ *  The display can write 4 lines of text, 21 characters each
+ *  Lines wrap ehn longer than
+ * 
  * 
  */
 
@@ -59,7 +63,7 @@ static const unsigned char PROGMEM logo_bmp[] =
 
 
 void setup() {
-    Serial.begin(9600);
+  Serial.begin(9600);
 
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
 
@@ -78,47 +82,127 @@ void setup() {
   // Clear the buffer
   display.clearDisplay();
 
-  // Draw a single pixel in white
-  display.drawPixel(10, 10, SSD1306_WHITE);
-  display.drawPixel(10, 20, SSD1306_WHITE);
-  display.drawPixel(10, 30, SSD1306_WHITE);
-
   // Show the display buffer on the screen. You MUST call display() after
   // drawing commands to make them visible on screen!
-  display.display();
   delay(2000);
 
+  display.setTextSize(1);      // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE); // Draw white text
 }
 
 void loop() {
-    // put your main code here, to run repeatedly:
-    testprintlines(1);
-    delay(1000);
-    testdrawrect(0);      // Draw rectangles (outlines)
-    delay(1000);
-    testdrawrect(1);      // Draw rectangles (outlines)
-    delay(1000);
-    testprintlines(0);
+  const int frameDuration = 8000;
+  testPrintLines(1);
+  delay(frameDuration);
+  testRowsText(1);
+  delay(frameDuration);
+  testPrintLineWrap(1);
+  delay(frameDuration);
+  testPrintBigLines(1);
+  delay(frameDuration);
+  testPrintExtraBig(1);
+  delay(frameDuration);
+  testPrintPositions(1);
+  delay(frameDuration);
 }
 
 /* ******************************************************************** */
 
 /* My display tests */
 
-void testprintlines(bool clear) {
+void testDispPixel(bool clear) {
   if (clear) {
     display.clearDisplay();
   }
-
-  display.setTextSize(1);      // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE); // Draw white text
   display.setCursor(0, 0);     // Start at top-left corner
-  display.println(F("my beef is dead"));
-  display.println(F("your beef is dead"));
-  display.setTextSize(2);             // 2X pixel scale
-  display.println(F("we all kill beef"));
+
+  // Draw a pixels in white
+  display.drawPixel(10, 10, SSD1306_WHITE);
+  display.drawPixel(10, 20, SSD1306_WHITE);
+  display.drawPixel(10, 30, SSD1306_WHITE);
   display.display();
-  delay(2000);
+}
+
+void testRowsText(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(1);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.println(F("aaaaaaaaaa"));
+  display.println(F("bbbbbbbbbb"));
+  display.println(F("MMMMMMMMMM"));
+  display.println(F("iiiiiiiiii"));
+  display.println(F("zzzzzzzzzz"));
+  display.display();
+}
+
+void testPrintLineWrap(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(1);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.println(F("0123456789abcdefghij0123456789"));
+  display.display();
+}
+
+void testPrintLines(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(1);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.println(F("lorem ipsum delorias "));
+  display.setCursor(0, 14);     // Start at top-left corner
+  display.println(F("il rega deus mastochi"));
+  display.setCursor(0, 27);     // Start at top-left corner
+  display.println(F("aggregate nose handle"));
+  display.display();
+}
+
+void testPrintPositions(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(1);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.print(F("lorem"));
+  display.setCursor(12, 8);     // Start at top-left corner
+  display.println(F("ipsum"));
+  display.setCursor(42, 16);     // Start at top-left corner
+  display.println(F("bitches"));
+  display.setCursor(84, 24);     // Start at top-left corner
+  display.println(F("~~!!!~~"));
+  display.display();
+}
+
+/**
+ * @brief print 
+ * */
+void testPrintExtraBig(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(3);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.println(F("chicken"));
+  display.setTextSize(1);
+  display.println(F("legs thighs & breasts"));
+  display.display();
+}
+
+
+void testPrintBigLines(bool clear) {
+  if (clear) {
+    display.clearDisplay();
+  }
+  display.setTextSize(2);
+  display.setCursor(0, 0);     // Start at top-left corner
+  display.println(F("flugelhorn"));
+  display.setTextSize(2);
+  display.println(F("_buttress"));
+  display.display();
 }
 
 /*  Below were imported from example */
