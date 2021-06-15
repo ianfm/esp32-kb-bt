@@ -25,6 +25,12 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#include "SimpleBLE.h"
+
+#include "ps2_Keyboard.h"
+#include "ps2_AnsiTranslator.h"
+#include "ps2_SimpleDiagnostics.h"
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 
